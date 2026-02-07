@@ -1,47 +1,37 @@
+import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
+import { eq, and, inArray, desc, asc } from "drizzle-orm";
+import { meal, dailyTotals, recipe } from "../src/db/schema";
 import { Meal, DailyTotals, Recipe } from "./types";
 
 const globalForDb = globalThis as unknown as {
-  db: Pool | undefined;
+  db: ReturnType<typeof drizzle> | undefined;
+  pool: Pool | undefined;
 };
 
-export const db =
-  globalForDb.db ??
+const pool =
+  globalForDb.pool ??
   new Pool({
     connectionString: process.env.DATABASE_URL,
   });
 
+if (process.env.NODE_ENV !== "production") globalForDb.pool = pool;
+
+export const db =
+  globalForDb.db ?? drizzle({ client: pool });
+
 if (process.env.NODE_ENV !== "production") globalForDb.db = db;
 
-// Helper functions for database operations
-export async function getMealsByDate(
-  date: string,
-  userId: string
-): Promise<Meal[]> {
-  const result = await db.query(
-    'SELECT * FROM "Meal" WHERE date = $1 AND "userId" = $2 ORDER BY "createdAt" DESC',
-    [date, userId]
-  );
-  return result.rows.map((row) => ({
-    ...row,
-    createdAt: new Date(row.createdAt),
-  }));
+// Helper function to convert timestamp string to Date
+function toDate(dateStr: string | null | undefined): Date {
+  if (!dateStr) return new Date();
+  return new Date(dateStr);
 }
 
-export async function getMealById(
-  id: string,
-  userId: string
-): Promise<Meal | null> {
-  const result = await db.query(
-    'SELECT * FROM "Meal" WHERE id = $1 AND "userId" = $2',
-    [id, userId]
-  );
-  if (result.rows.length === 0) return null;
-  const row = result.rows[0];
-  return {
-    ...row,
-    createdAt: new Date(row.createdAt),
-  };
+// Helper function to convert numeric to number
+function toNumber(value: string | null | undefined): number {
+  if (!value) return 0;
+  return parseFloat(value);
 }
 
 // Simple ID generator (similar to cuid)
@@ -49,6 +39,58 @@ function generateId(): string {
   const timestamp = Date.now().toString(36);
   const random = Math.random().toString(36).substring(2, 15);
   return `${timestamp}${random}`;
+}
+
+// Meal functions
+export async function getMealsByDate(
+  date: string,
+  userId: string
+): Promise<Meal[]> {
+  const results = await db
+    .select()
+    .from(meal)
+    .where(and(eq(meal.date, date), eq(meal.userId, userId)))
+    .orderBy(desc(meal.createdAt));
+
+  return results.map((row) => ({
+    id: row.id,
+    userId: row.userId || "",
+    date: row.date,
+    description: row.description,
+    mealType: row.mealType as Meal["mealType"],
+    calories: row.calories,
+    protein: row.protein,
+    carbs: row.carbs,
+    fats: row.fats,
+    createdAt: toDate(row.createdAt),
+  }));
+}
+
+export async function getMealById(
+  id: string,
+  userId: string
+): Promise<Meal | null> {
+  const results = await db
+    .select()
+    .from(meal)
+    .where(and(eq(meal.id, id), eq(meal.userId, userId)))
+    .limit(1);
+
+  if (results.length === 0) return null;
+
+  const row = results[0];
+  return {
+    id: row.id,
+    userId: row.userId || "",
+    date: row.date,
+    description: row.description,
+    mealType: row.mealType as Meal["mealType"],
+    calories: row.calories,
+    protein: row.protein,
+    carbs: row.carbs,
+    fats: row.fats,
+    createdAt: toDate(row.createdAt),
+  };
 }
 
 export async function createMeal(data: {
@@ -62,26 +104,33 @@ export async function createMeal(data: {
   fats: number;
 }): Promise<Meal> {
   const id = generateId();
-  const result = await db.query(
-    `INSERT INTO "Meal" (id, "userId", date, description, "mealType", calories, protein, carbs, fats, "createdAt")
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW())
-     RETURNING *`,
-    [
+  const results = await db
+    .insert(meal)
+    .values({
       id,
-      data.userId,
-      data.date,
-      data.description,
-      data.mealType,
-      data.calories,
-      data.protein,
-      data.carbs,
-      data.fats,
-    ]
-  );
-  const row = result.rows[0];
+      userId: data.userId,
+      date: data.date,
+      description: data.description,
+      mealType: data.mealType,
+      calories: data.calories,
+      protein: data.protein,
+      carbs: data.carbs,
+      fats: data.fats,
+    })
+    .returning();
+
+  const row = results[0];
   return {
-    ...row,
-    createdAt: new Date(row.createdAt),
+    id: row.id,
+    userId: row.userId || "",
+    date: row.date,
+    description: row.description,
+    mealType: row.mealType as Meal["mealType"],
+    calories: row.calories,
+    protein: row.protein,
+    carbs: row.carbs,
+    fats: row.fats,
+    createdAt: toDate(row.createdAt),
   };
 }
 
@@ -90,46 +139,70 @@ export async function updateMeal(
   userId: string,
   updates: { mealType?: string }
 ): Promise<Meal> {
-  const result = await db.query(
-    `UPDATE "Meal" 
-     SET "mealType" = $1
-     WHERE id = $2 AND "userId" = $3
-     RETURNING *`,
-    [updates.mealType, id, userId]
-  );
-  if (result.rows.length === 0) {
+  const updateData: Partial<typeof meal.$inferInsert> = {};
+  if (updates.mealType) {
+    updateData.mealType = updates.mealType;
+  }
+
+  const results = await db
+    .update(meal)
+    .set(updateData)
+    .where(and(eq(meal.id, id), eq(meal.userId, userId)))
+    .returning();
+
+  if (results.length === 0) {
     throw new Error("Meal not found");
   }
-  const row = result.rows[0];
+
+  const row = results[0];
   return {
-    ...row,
-    createdAt: new Date(row.createdAt),
+    id: row.id,
+    userId: row.userId || "",
+    date: row.date,
+    description: row.description,
+    mealType: row.mealType as Meal["mealType"],
+    calories: row.calories,
+    protein: row.protein,
+    carbs: row.carbs,
+    fats: row.fats,
+    createdAt: toDate(row.createdAt),
   };
 }
 
 export async function deleteMeal(id: string, userId: string): Promise<void> {
-  const result = await db.query(
-    'DELETE FROM "Meal" WHERE id = $1 AND "userId" = $2',
-    [id, userId]
-  );
-  if (result.rowCount === 0) {
+  const result = await db
+    .delete(meal)
+    .where(and(eq(meal.id, id), eq(meal.userId, userId)))
+    .returning();
+
+  if (result.length === 0) {
     throw new Error("Meal not found");
   }
 }
 
+// DailyTotals functions
 export async function getDailyTotalsByDate(
   date: string,
   userId: string
 ): Promise<DailyTotals | null> {
-  const result = await db.query(
-    'SELECT * FROM "DailyTotals" WHERE date = $1 AND "userId" = $2',
-    [date, userId]
-  );
-  if (result.rows.length === 0) return null;
-  const row = result.rows[0];
+  const results = await db
+    .select()
+    .from(dailyTotals)
+    .where(and(eq(dailyTotals.date, date), eq(dailyTotals.userId, userId)))
+    .limit(1);
+
+  if (results.length === 0) return null;
+
+  const row = results[0];
   return {
-    ...row,
-    updatedAt: new Date(row.updatedAt),
+    id: row.id,
+    userId: row.userId || "",
+    date: row.date,
+    totalCalories: row.totalCalories,
+    totalProtein: row.totalProtein,
+    totalCarbs: row.totalCarbs,
+    totalFats: row.totalFats,
+    updatedAt: toDate(row.updatedAt),
   };
 }
 
@@ -137,13 +210,26 @@ export async function getDailyTotalsByDates(
   dates: string[],
   userId: string
 ): Promise<DailyTotals[]> {
-  const result = await db.query(
-    'SELECT * FROM "DailyTotals" WHERE date = ANY($1::text[]) AND "userId" = $2 ORDER BY date DESC',
-    [dates, userId]
-  );
-  return result.rows.map((row) => ({
-    ...row,
-    updatedAt: new Date(row.updatedAt),
+  const results = await db
+    .select()
+    .from(dailyTotals)
+    .where(
+      and(
+        inArray(dailyTotals.date, dates),
+        eq(dailyTotals.userId, userId)
+      )
+    )
+    .orderBy(desc(dailyTotals.date));
+
+  return results.map((row) => ({
+    id: row.id,
+    userId: row.userId || "",
+    date: row.date,
+    totalCalories: row.totalCalories,
+    totalProtein: row.totalProtein,
+    totalCarbs: row.totalCarbs,
+    totalFats: row.totalFats,
+    updatedAt: toDate(row.updatedAt),
   }));
 }
 
@@ -156,44 +242,60 @@ export async function upsertDailyTotals(data: {
   totalFats: number;
 }): Promise<DailyTotals> {
   const id = generateId();
-  const result = await db.query(
-    `INSERT INTO "DailyTotals" (id, "userId", date, "totalCalories", "totalProtein", "totalCarbs", "totalFats", "updatedAt")
-     VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
-     ON CONFLICT ("userId", date) 
-     DO UPDATE SET 
-       "totalCalories" = $4,
-       "totalProtein" = $5,
-       "totalCarbs" = $6,
-       "totalFats" = $7,
-       "updatedAt" = NOW()
-     RETURNING *`,
-    [
+  const results = await db
+    .insert(dailyTotals)
+    .values({
       id,
-      data.userId,
-      data.date,
-      data.totalCalories,
-      data.totalProtein,
-      data.totalCarbs,
-      data.totalFats,
-    ]
-  );
-  const row = result.rows[0];
+      userId: data.userId,
+      date: data.date,
+      totalCalories: data.totalCalories,
+      totalProtein: data.totalProtein,
+      totalCarbs: data.totalCarbs,
+      totalFats: data.totalFats,
+    })
+    .onConflictDoUpdate({
+      target: [dailyTotals.date, dailyTotals.userId],
+      set: {
+        totalCalories: data.totalCalories,
+        totalProtein: data.totalProtein,
+        totalCarbs: data.totalCarbs,
+        totalFats: data.totalFats,
+      },
+    })
+    .returning();
+
+  const row = results[0];
   return {
-    ...row,
-    updatedAt: new Date(row.updatedAt),
+    id: row.id,
+    userId: row.userId || "",
+    date: row.date,
+    totalCalories: row.totalCalories,
+    totalProtein: row.totalProtein,
+    totalCarbs: row.totalCarbs,
+    totalFats: row.totalFats,
+    updatedAt: toDate(row.updatedAt),
   };
 }
 
 // Recipe functions
 export async function getRecipesByUserId(userId: string): Promise<Recipe[]> {
-  const result = await db.query(
-    'SELECT * FROM "Recipe" WHERE "userId" = $1 ORDER BY name ASC',
-    [userId]
-  );
-  return result.rows.map((row) => ({
-    ...row,
-    createdAt: new Date(row.createdAt),
-    updatedAt: new Date(row.updatedAt),
+  const results = await db
+    .select()
+    .from(recipe)
+    .where(eq(recipe.userId, userId))
+    .orderBy(asc(recipe.name));
+
+  return results.map((row) => ({
+    id: row.id,
+    userId: row.userId,
+    name: row.name,
+    description: row.description,
+    calories: toNumber(row.calories),
+    protein: toNumber(row.protein),
+    carbs: toNumber(row.carbs),
+    fats: toNumber(row.fats),
+    createdAt: toDate(row.createdAt),
+    updatedAt: toDate(row.updatedAt),
   }));
 }
 
@@ -201,16 +303,26 @@ export async function getRecipeById(
   id: string,
   userId: string
 ): Promise<Recipe | null> {
-  const result = await db.query(
-    'SELECT * FROM "Recipe" WHERE id = $1 AND "userId" = $2',
-    [id, userId]
-  );
-  if (result.rows.length === 0) return null;
-  const row = result.rows[0];
+  const results = await db
+    .select()
+    .from(recipe)
+    .where(and(eq(recipe.id, id), eq(recipe.userId, userId)))
+    .limit(1);
+
+  if (results.length === 0) return null;
+
+  const row = results[0];
   return {
-    ...row,
-    createdAt: new Date(row.createdAt),
-    updatedAt: new Date(row.updatedAt),
+    id: row.id,
+    userId: row.userId,
+    name: row.name,
+    description: row.description,
+    calories: toNumber(row.calories),
+    protein: toNumber(row.protein),
+    carbs: toNumber(row.carbs),
+    fats: toNumber(row.fats),
+    createdAt: toDate(row.createdAt),
+    updatedAt: toDate(row.updatedAt),
   };
 }
 
@@ -224,26 +336,32 @@ export async function createRecipe(data: {
   fats: number;
 }): Promise<Recipe> {
   const id = generateId();
-  const result = await db.query(
-    `INSERT INTO "Recipe" (id, "userId", name, description, calories, protein, carbs, fats, "createdAt", "updatedAt")
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), NOW())
-     RETURNING *`,
-    [
+  const results = await db
+    .insert(recipe)
+    .values({
       id,
-      data.userId,
-      data.name,
-      data.description,
-      data.calories,
-      data.protein,
-      data.carbs,
-      data.fats,
-    ]
-  );
-  const row = result.rows[0];
+      userId: data.userId,
+      name: data.name,
+      description: data.description,
+      calories: data.calories.toString(),
+      protein: data.protein.toString(),
+      carbs: data.carbs.toString(),
+      fats: data.fats.toString(),
+    })
+    .returning();
+
+  const row = results[0];
   return {
-    ...row,
-    createdAt: new Date(row.createdAt),
-    updatedAt: new Date(row.updatedAt),
+    id: row.id,
+    userId: row.userId,
+    name: row.name,
+    description: row.description,
+    calories: toNumber(row.calories),
+    protein: toNumber(row.protein),
+    carbs: toNumber(row.carbs),
+    fats: toNumber(row.fats),
+    createdAt: toDate(row.createdAt),
+    updatedAt: toDate(row.updatedAt),
   };
 }
 
@@ -252,30 +370,43 @@ export async function updateRecipe(
   userId: string,
   updates: { name?: string }
 ): Promise<Recipe> {
-  const result = await db.query(
-    `UPDATE "Recipe" 
-     SET name = $1, "updatedAt" = NOW()
-     WHERE id = $2 AND "userId" = $3
-     RETURNING *`,
-    [updates.name, id, userId]
-  );
-  if (result.rows.length === 0) {
+  const updateData: Partial<typeof recipe.$inferInsert> = {};
+  if (updates.name) {
+    updateData.name = updates.name;
+  }
+
+  const results = await db
+    .update(recipe)
+    .set(updateData)
+    .where(and(eq(recipe.id, id), eq(recipe.userId, userId)))
+    .returning();
+
+  if (results.length === 0) {
     throw new Error("Recipe not found");
   }
-  const row = result.rows[0];
+
+  const row = results[0];
   return {
-    ...row,
-    createdAt: new Date(row.createdAt),
-    updatedAt: new Date(row.updatedAt),
+    id: row.id,
+    userId: row.userId,
+    name: row.name,
+    description: row.description,
+    calories: toNumber(row.calories),
+    protein: toNumber(row.protein),
+    carbs: toNumber(row.carbs),
+    fats: toNumber(row.fats),
+    createdAt: toDate(row.createdAt),
+    updatedAt: toDate(row.updatedAt),
   };
 }
 
 export async function deleteRecipe(id: string, userId: string): Promise<void> {
-  const result = await db.query(
-    'DELETE FROM "Recipe" WHERE id = $1 AND "userId" = $2',
-    [id, userId]
-  );
-  if (result.rowCount === 0) {
+  const result = await db
+    .delete(recipe)
+    .where(and(eq(recipe.id, id), eq(recipe.userId, userId)))
+    .returning();
+
+  if (result.length === 0) {
     throw new Error("Recipe not found");
   }
 }
