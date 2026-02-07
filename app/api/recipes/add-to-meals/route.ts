@@ -5,13 +5,13 @@ import {
   getDailyTotalsByDate,
   upsertDailyTotals,
 } from "@/lib/db";
-import { getTodayDateString, getUserId } from "@/lib/utils";
+import { getTodayDateString } from "@/lib/utils";
+import { requireAuthenticatedUser } from "@/lib/auth-helpers";
 
 export async function POST(request: NextRequest) {
   try {
-    const { recipeId, mealType, userId: providedUserId } = await request.json();
-
-    const userId = providedUserId || getUserId();
+    const user = await requireAuthenticatedUser();
+    const { recipeId, mealType } = await request.json();
 
     if (!recipeId) {
       return NextResponse.json(
@@ -20,15 +20,21 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!mealType || !["breakfast", "lunch", "dinner", "snack"].includes(mealType)) {
+    if (
+      !mealType ||
+      !["breakfast", "lunch", "dinner", "snack"].includes(mealType)
+    ) {
       return NextResponse.json(
-        { error: "Valid meal type is required (breakfast, lunch, dinner, or snack)" },
+        {
+          error:
+            "Valid meal type is required (breakfast, lunch, dinner, or snack)",
+        },
         { status: 400 }
       );
     }
 
     // Get the recipe
-    const recipe = await getRecipeById(recipeId, userId);
+    const recipe = await getRecipeById(recipeId, user.id);
 
     if (!recipe) {
       return NextResponse.json({ error: "Recipe not found" }, { status: 404 });
@@ -37,6 +43,7 @@ export async function POST(request: NextRequest) {
     // Create a meal entry for today with the recipe's nutritional values
     const date = getTodayDateString();
     const meal = await createMeal({
+      userId: user.id,
       date,
       description: recipe.name,
       mealType,
@@ -47,10 +54,11 @@ export async function POST(request: NextRequest) {
     });
 
     // Update daily totals
-    const existingTotals = await getDailyTotalsByDate(date);
+    const existingTotals = await getDailyTotalsByDate(date, user.id);
 
     if (existingTotals) {
       await upsertDailyTotals({
+        userId: user.id,
         date,
         totalCalories: existingTotals.totalCalories + recipe.calories,
         totalProtein: existingTotals.totalProtein + recipe.protein,
@@ -59,6 +67,7 @@ export async function POST(request: NextRequest) {
       });
     } else {
       await upsertDailyTotals({
+        userId: user.id,
         date,
         totalCalories: recipe.calories,
         totalProtein: recipe.protein,

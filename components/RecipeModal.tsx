@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import { Recipe, MealType } from "@/lib/types";
-import { getUserId } from "@/lib/utils";
 
 interface RecipeModalProps {
   isOpen: boolean;
@@ -20,7 +19,8 @@ export default function RecipeModal({
   const [searchQuery, setSearchQuery] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState("");
-  const [selectedMealType, setSelectedMealType] = useState<MealType>("breakfast");
+  const [selectedMealType, setSelectedMealType] =
+    useState<MealType>("breakfast");
 
   useEffect(() => {
     if (isOpen) {
@@ -31,8 +31,7 @@ export default function RecipeModal({
   const fetchRecipes = async () => {
     setLoading(true);
     try {
-      const userId = getUserId();
-      const response = await fetch(`/api/recipes?userId=${userId}`);
+      const response = await fetch(`/api/recipes`);
       if (response.ok) {
         const data = await response.json();
         setRecipes(data.recipes);
@@ -50,13 +49,12 @@ export default function RecipeModal({
     }
 
     try {
-      const userId = getUserId();
       const response = await fetch("/api/recipes", {
         method: "DELETE",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ id, userId }),
+        body: JSON.stringify({ id }),
       });
 
       if (response.ok) {
@@ -78,13 +76,12 @@ export default function RecipeModal({
     }
 
     try {
-      const userId = getUserId();
       const response = await fetch("/api/recipes", {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ id, name: editName.trim(), userId }),
+        body: JSON.stringify({ id, name: editName.trim() }),
       });
 
       if (response.ok) {
@@ -131,7 +128,9 @@ export default function RecipeModal({
 
         <div className="flex-1 overflow-y-auto p-6">
           {loading ? (
-            <div className="text-center py-8 text-gray-500">Loading recipes...</div>
+            <div className="text-center py-8 text-gray-500">
+              Loading recipes...
+            </div>
           ) : filteredRecipes.length === 0 ? (
             <div className="text-center py-8 text-gray-500">
               {searchQuery
@@ -253,7 +252,8 @@ export default function RecipeModal({
             </button>
           </div>
           <div className="mt-4 text-sm text-gray-600">
-            Click "Add to Meals" on any recipe to add it to today's meals with the selected meal type.
+            Click "Add to Meals" on any recipe to add it to today's meals with
+            the selected meal type.
           </div>
         </div>
       </div>

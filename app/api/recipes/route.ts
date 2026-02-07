@@ -6,14 +6,12 @@ import {
   deleteRecipe,
   getRecipeById,
 } from "@/lib/db";
-import { getUserId } from "@/lib/utils";
+import { requireAuthenticatedUser } from "@/lib/auth-helpers";
 
 export async function GET(request: NextRequest) {
   try {
-    const searchParams = request.nextUrl.searchParams;
-    const userId = searchParams.get("userId") || getUserId();
-
-    const recipes = await getRecipesByUserId(userId);
+    const user = await requireAuthenticatedUser();
+    const recipes = await getRecipesByUserId(user.id);
 
     return NextResponse.json({ recipes });
   } catch (error) {
@@ -27,10 +25,9 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const { name, description, calories, protein, carbs, fats, userId: providedUserId } =
+    const user = await requireAuthenticatedUser();
+    const { name, description, calories, protein, carbs, fats } =
       await request.json();
-
-    const userId = providedUserId || getUserId();
 
     if (!name || typeof name !== "string" || name.trim().length === 0) {
       return NextResponse.json(
@@ -52,7 +49,7 @@ export async function POST(request: NextRequest) {
     }
 
     const recipe = await createRecipe({
-      userId,
+      userId: user.id,
       name: name.trim(),
       description: description || "",
       calories,
@@ -73,9 +70,8 @@ export async function POST(request: NextRequest) {
 
 export async function PATCH(request: NextRequest) {
   try {
-    const { id, name, userId: providedUserId } = await request.json();
-
-    const userId = providedUserId || getUserId();
+    const user = await requireAuthenticatedUser();
+    const { id, name } = await request.json();
 
     if (!id) {
       return NextResponse.json(
@@ -91,16 +87,13 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
-    const recipe = await updateRecipe(id, userId, { name: name.trim() });
+    const recipe = await updateRecipe(id, user.id, { name: name.trim() });
 
     return NextResponse.json({ recipe });
   } catch (error) {
     console.error("Error updating recipe:", error);
     if (error instanceof Error && error.message === "Recipe not found") {
-      return NextResponse.json(
-        { error: "Recipe not found" },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "Recipe not found" }, { status: 404 });
     }
     return NextResponse.json(
       { error: "Failed to update recipe" },
@@ -111,9 +104,8 @@ export async function PATCH(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   try {
-    const { id, userId: providedUserId } = await request.json();
-
-    const userId = providedUserId || getUserId();
+    const user = await requireAuthenticatedUser();
+    const { id } = await request.json();
 
     if (!id) {
       return NextResponse.json(
@@ -122,16 +114,13 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    await deleteRecipe(id, userId);
+    await deleteRecipe(id, user.id);
 
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("Error deleting recipe:", error);
     if (error instanceof Error && error.message === "Recipe not found") {
-      return NextResponse.json(
-        { error: "Recipe not found" },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "Recipe not found" }, { status: 404 });
     }
     return NextResponse.json(
       { error: "Failed to delete recipe" },

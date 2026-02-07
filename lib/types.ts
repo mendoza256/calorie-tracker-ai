@@ -2,6 +2,7 @@ export type MealType = "breakfast" | "lunch" | "dinner" | "snack";
 
 export interface Meal {
   id: string;
+  userId: string;
   date: string; // YYYY-MM-DD format
   description: string;
   mealType: MealType;
@@ -14,6 +15,7 @@ export interface Meal {
 
 export interface DailyTotals {
   id: string;
+  userId: string;
   date: string; // YYYY-MM-DD format
   totalCalories: number;
   totalProtein: number;

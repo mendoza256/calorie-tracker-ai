@@ -8,14 +8,16 @@ import {
   upsertDailyTotals,
 } from "@/lib/db";
 import { getTodayDateString } from "@/lib/utils";
+import { requireAuthenticatedUser } from "@/lib/auth-helpers";
 
 export async function GET(request: NextRequest) {
   try {
+    const user = await requireAuthenticatedUser();
     const searchParams = request.nextUrl.searchParams;
     const date = searchParams.get("date") || getTodayDateString();
 
-    const meals = await getMealsByDate(date);
-    const totals = await getDailyTotalsByDate(date);
+    const meals = await getMealsByDate(date, user.id);
+    const totals = await getDailyTotalsByDate(date, user.id);
 
     return NextResponse.json({
       meals,
@@ -38,6 +40,7 @@ export async function GET(request: NextRequest) {
 
 export async function PATCH(request: NextRequest) {
   try {
+    const user = await requireAuthenticatedUser();
     const { id, mealType } = await request.json();
 
     if (!id) {
@@ -47,22 +50,28 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
-    if (!mealType || !["breakfast", "lunch", "dinner", "snack"].includes(mealType)) {
+    if (
+      !mealType ||
+      !["breakfast", "lunch", "dinner", "snack"].includes(mealType)
+    ) {
       return NextResponse.json(
-        { error: "Valid meal type is required (breakfast, lunch, dinner, or snack)" },
+        {
+          error:
+            "Valid meal type is required (breakfast, lunch, dinner, or snack)",
+        },
         { status: 400 }
       );
     }
 
-    // Get the meal to verify it exists
-    const meal = await getMealById(id);
+    // Get the meal to verify it exists and belongs to the user
+    const meal = await getMealById(id, user.id);
 
     if (!meal) {
       return NextResponse.json({ error: "Meal not found" }, { status: 404 });
     }
 
     // Update the meal
-    await updateMeal(id, { mealType });
+    await updateMeal(id, user.id, { mealType });
 
     return NextResponse.json({ success: true });
   } catch (error) {
@@ -76,6 +85,7 @@ export async function PATCH(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   try {
+    const user = await requireAuthenticatedUser();
     const { id } = await request.json();
 
     if (!id) {
@@ -86,17 +96,17 @@ export async function DELETE(request: NextRequest) {
     }
 
     // Get the meal to know which date to update
-    const meal = await getMealById(id);
+    const meal = await getMealById(id, user.id);
 
     if (!meal) {
       return NextResponse.json({ error: "Meal not found" }, { status: 404 });
     }
 
     // Delete the meal
-    await deleteMeal(id);
+    await deleteMeal(id, user.id);
 
     // Recalculate daily totals
-    const remainingMeals = await getMealsByDate(meal.date);
+    const remainingMeals = await getMealsByDate(meal.date, user.id);
 
     const newTotals = remainingMeals.reduce(
       (acc, m) => ({
@@ -114,6 +124,7 @@ export async function DELETE(request: NextRequest) {
     );
 
     await upsertDailyTotals({
+      userId: user.id,
       date: meal.date,
       ...newTotals,
     });

@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import { Meal, MealType } from "@/lib/types";
-import { getUserId } from "@/lib/utils";
 
 interface MealCardProps {
   meal: Meal;
@@ -92,7 +91,6 @@ export default function MealCard({ meal, onDelete, onUpdate }: MealCardProps) {
 
     setIsCreatingRecipe(true);
     try {
-      const userId = getUserId();
       const response = await fetch("/api/recipes", {
         method: "POST",
         headers: {
@@ -105,7 +103,6 @@ export default function MealCard({ meal, onDelete, onUpdate }: MealCardProps) {
           protein: meal.protein,
           carbs: meal.carbs,
           fats: meal.fats,
-          userId,
         }),
       });
 
@@ -177,16 +174,16 @@ export default function MealCard({ meal, onDelete, onUpdate }: MealCardProps) {
             ) : (
               <button
                 onClick={() => setIsEditingType(true)}
-                className={`px-2 py-1 rounded text-xs font-semibold hover:opacity-80 transition-opacity cursor-pointer ${mealTypeColors[meal.mealType]}`}
+                className={`px-2 py-1 rounded text-xs font-semibold hover:opacity-80 transition-opacity cursor-pointer ${
+                  mealTypeColors[meal.mealType]
+                }`}
                 title="Click to edit meal type"
               >
                 {mealTypeLabels[meal.mealType]}
               </button>
             )}
           </div>
-          <p className="text-gray-800 font-medium">
-            {meal.description}
-          </p>
+          <p className="text-gray-800 font-medium">{meal.description}</p>
         </div>
         <div className="flex gap-2 items-center">
           {showCreateRecipe ? (

@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { MealType } from "@/lib/types";
 import RecipeModal from "./RecipeModal";
-import { getUserId } from "@/lib/utils";
 
 interface MealInputProps {
   onMealAdded: () => void;
@@ -55,13 +54,12 @@ export default function MealInput({ onMealAdded }: MealInputProps) {
     setError(null);
 
     try {
-      const userId = getUserId();
       const response = await fetch("/api/recipes/add-to-meals", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ recipeId, mealType: selectedMealType, userId }),
+        body: JSON.stringify({ recipeId, mealType: selectedMealType }),
       });
 
       if (!response.ok) {

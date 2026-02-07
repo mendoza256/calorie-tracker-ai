@@ -14,10 +14,13 @@ export const db =
 if (process.env.NODE_ENV !== "production") globalForDb.db = db;
 
 // Helper functions for database operations
-export async function getMealsByDate(date: string): Promise<Meal[]> {
+export async function getMealsByDate(
+  date: string,
+  userId: string
+): Promise<Meal[]> {
   const result = await db.query(
-    'SELECT * FROM "Meal" WHERE date = $1 ORDER BY "createdAt" DESC',
-    [date]
+    'SELECT * FROM "Meal" WHERE date = $1 AND "userId" = $2 ORDER BY "createdAt" DESC',
+    [date, userId]
   );
   return result.rows.map((row) => ({
     ...row,
@@ -25,8 +28,14 @@ export async function getMealsByDate(date: string): Promise<Meal[]> {
   }));
 }
 
-export async function getMealById(id: string): Promise<Meal | null> {
-  const result = await db.query('SELECT * FROM "Meal" WHERE id = $1', [id]);
+export async function getMealById(
+  id: string,
+  userId: string
+): Promise<Meal | null> {
+  const result = await db.query(
+    'SELECT * FROM "Meal" WHERE id = $1 AND "userId" = $2',
+    [id, userId]
+  );
   if (result.rows.length === 0) return null;
   const row = result.rows[0];
   return {
@@ -43,6 +52,7 @@ function generateId(): string {
 }
 
 export async function createMeal(data: {
+  userId: string;
   date: string;
   description: string;
   mealType: string;
@@ -53,11 +63,12 @@ export async function createMeal(data: {
 }): Promise<Meal> {
   const id = generateId();
   const result = await db.query(
-    `INSERT INTO "Meal" (id, date, description, "mealType", calories, protein, carbs, fats, "createdAt")
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW())
+    `INSERT INTO "Meal" (id, "userId", date, description, "mealType", calories, protein, carbs, fats, "createdAt")
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW())
      RETURNING *`,
     [
       id,
+      data.userId,
       data.date,
       data.description,
       data.mealType,
@@ -76,14 +87,15 @@ export async function createMeal(data: {
 
 export async function updateMeal(
   id: string,
+  userId: string,
   updates: { mealType?: string }
 ): Promise<Meal> {
   const result = await db.query(
     `UPDATE "Meal" 
      SET "mealType" = $1
-     WHERE id = $2
+     WHERE id = $2 AND "userId" = $3
      RETURNING *`,
-    [updates.mealType, id]
+    [updates.mealType, id, userId]
   );
   if (result.rows.length === 0) {
     throw new Error("Meal not found");
@@ -95,16 +107,24 @@ export async function updateMeal(
   };
 }
 
-export async function deleteMeal(id: string): Promise<void> {
-  await db.query('DELETE FROM "Meal" WHERE id = $1', [id]);
+export async function deleteMeal(id: string, userId: string): Promise<void> {
+  const result = await db.query(
+    'DELETE FROM "Meal" WHERE id = $1 AND "userId" = $2',
+    [id, userId]
+  );
+  if (result.rowCount === 0) {
+    throw new Error("Meal not found");
+  }
 }
 
 export async function getDailyTotalsByDate(
-  date: string
+  date: string,
+  userId: string
 ): Promise<DailyTotals | null> {
-  const result = await db.query('SELECT * FROM "DailyTotals" WHERE date = $1', [
-    date,
-  ]);
+  const result = await db.query(
+    'SELECT * FROM "DailyTotals" WHERE date = $1 AND "userId" = $2',
+    [date, userId]
+  );
   if (result.rows.length === 0) return null;
   const row = result.rows[0];
   return {
@@ -114,11 +134,12 @@ export async function getDailyTotalsByDate(
 }
 
 export async function getDailyTotalsByDates(
-  dates: string[]
+  dates: string[],
+  userId: string
 ): Promise<DailyTotals[]> {
   const result = await db.query(
-    'SELECT * FROM "DailyTotals" WHERE date = ANY($1::text[]) ORDER BY date DESC',
-    [dates]
+    'SELECT * FROM "DailyTotals" WHERE date = ANY($1::text[]) AND "userId" = $2 ORDER BY date DESC',
+    [dates, userId]
   );
   return result.rows.map((row) => ({
     ...row,
@@ -127,6 +148,7 @@ export async function getDailyTotalsByDates(
 }
 
 export async function upsertDailyTotals(data: {
+  userId: string;
   date: string;
   totalCalories: number;
   totalProtein: number;
@@ -135,18 +157,19 @@ export async function upsertDailyTotals(data: {
 }): Promise<DailyTotals> {
   const id = generateId();
   const result = await db.query(
-    `INSERT INTO "DailyTotals" (id, date, "totalCalories", "totalProtein", "totalCarbs", "totalFats", "updatedAt")
-     VALUES ($1, $2, $3, $4, $5, $6, NOW())
-     ON CONFLICT (date) 
+    `INSERT INTO "DailyTotals" (id, "userId", date, "totalCalories", "totalProtein", "totalCarbs", "totalFats", "updatedAt")
+     VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
+     ON CONFLICT ("userId", date) 
      DO UPDATE SET 
-       "totalCalories" = $3,
-       "totalProtein" = $4,
-       "totalCarbs" = $5,
-       "totalFats" = $6,
+       "totalCalories" = $4,
+       "totalProtein" = $5,
+       "totalCarbs" = $6,
+       "totalFats" = $7,
        "updatedAt" = NOW()
      RETURNING *`,
     [
       id,
+      data.userId,
       data.date,
       data.totalCalories,
       data.totalProtein,
@@ -174,7 +197,10 @@ export async function getRecipesByUserId(userId: string): Promise<Recipe[]> {
   }));
 }
 
-export async function getRecipeById(id: string, userId: string): Promise<Recipe | null> {
+export async function getRecipeById(
+  id: string,
+  userId: string
+): Promise<Recipe | null> {
   const result = await db.query(
     'SELECT * FROM "Recipe" WHERE id = $1 AND "userId" = $2',
     [id, userId]

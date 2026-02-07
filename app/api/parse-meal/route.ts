@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { openai } from "@/lib/openai";
 import { createMeal, getDailyTotalsByDate, upsertDailyTotals } from "@/lib/db";
 import { getTodayDateString } from "@/lib/utils";
+import { requireAuthenticatedUser } from "@/lib/auth-helpers";
 
 interface ParsedMeal {
   calories: number;
@@ -12,6 +13,7 @@ interface ParsedMeal {
 
 export async function POST(request: NextRequest) {
   try {
+    const user = await requireAuthenticatedUser();
     const { description, mealType } = await request.json();
 
     if (!description || typeof description !== "string") {
@@ -21,9 +23,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!mealType || !["breakfast", "lunch", "dinner", "snack"].includes(mealType)) {
+    if (
+      !mealType ||
+      !["breakfast", "lunch", "dinner", "snack"].includes(mealType)
+    ) {
       return NextResponse.json(
-        { error: "Valid meal type is required (breakfast, lunch, dinner, or snack)" },
+        {
+          error:
+            "Valid meal type is required (breakfast, lunch, dinner, or snack)",
+        },
         { status: 400 }
       );
     }
@@ -82,6 +90,7 @@ Return ONLY the JSON, no other text.`,
     // Save to database
     const date = getTodayDateString();
     const meal = await createMeal({
+      userId: user.id,
       date,
       description,
       mealType,
@@ -92,10 +101,11 @@ Return ONLY the JSON, no other text.`,
     });
 
     // Update daily totals
-    const existingTotals = await getDailyTotalsByDate(date);
+    const existingTotals = await getDailyTotalsByDate(date, user.id);
 
     if (existingTotals) {
       await upsertDailyTotals({
+        userId: user.id,
         date,
         totalCalories: existingTotals.totalCalories + parsedMeal.calories,
         totalProtein: existingTotals.totalProtein + parsedMeal.protein,
@@ -104,6 +114,7 @@ Return ONLY the JSON, no other text.`,
       });
     } else {
       await upsertDailyTotals({
+        userId: user.id,
         date,
         totalCalories: parsedMeal.calories,
         totalProtein: parsedMeal.protein,
