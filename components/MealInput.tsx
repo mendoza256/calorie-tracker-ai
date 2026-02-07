@@ -96,7 +96,7 @@ export default function MealInput({ onMealAdded }: MealInputProps) {
             type="text"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            placeholder="e.g., 100g of Magerquark with 30g whey and 10 almonds"
+            placeholder="e.g., 100g of low-fat quark with 30g whey and 10 almonds"
             className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             disabled={loading}
           />
