@@ -7,7 +7,9 @@ if (!process.env.DATABASE_URL && typeof window === "undefined") {
   try {
     const dotenv = require("dotenv");
     const { resolve } = require("path");
-    const result = dotenv.config({ path: resolve(process.cwd(), ".env.local") });
+    const result = dotenv.config({
+      path: resolve(process.cwd(), ".env.local"),
+    });
     // If dotenv loaded successfully but DATABASE_URL still isn't set, it might be in .env
     if (!process.env.DATABASE_URL && !result.error) {
       dotenv.config({ path: resolve(process.cwd(), ".env") });
@@ -40,7 +42,7 @@ const getAuthDbConfig = () => {
     if (!username) {
       throw new Error(
         "Database username not found in DATABASE_URL and no system username available. " +
-        "Please ensure DATABASE_URL includes a username (e.g., postgresql://username@host:port/database)"
+          "Please ensure DATABASE_URL includes a username (e.g., postgresql://username@host:port/database)"
       );
     }
     return {
@@ -99,12 +101,12 @@ if (!process.env.DATABASE_URL && typeof window === "undefined") {
   } catch {
     // dotenv might not be available
   }
-  
+
   // If still not set, throw a clear error
   if (!process.env.DATABASE_URL) {
     throw new Error(
       "DATABASE_URL is not set. Make sure .env.local exists and contains DATABASE_URL. " +
-      "The environment variable loading code should have loaded it, but it wasn't found."
+        "The environment variable loading code should have loaded it, but it wasn't found."
     );
   }
 }
@@ -117,7 +119,10 @@ export const auth = betterAuth({
   database: getAuthDb(),
   emailAndPassword: {
     enabled: true,
-    requireEmailVerification: false, // Set to true in production
+    requireEmailVerification:
+      process.env.NODE_ENV === "production" ? true : false,
+    disableSignUp:
+      process.env.BETTER_AUTH_DISABLE_SIGN_UP === "true" ? true : false,
   },
   baseURL:
     process.env.BETTER_AUTH_URL ||
