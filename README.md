@@ -77,6 +77,20 @@ Railway offers free tiers for both the application and PostgreSQL database. See 
 6. Deploy - migrations run automatically
 7. Create root user via Railway shell: `npm run create-root-user`
 
+### Vercel (Best for Next.js)
+
+Vercel offers excellent Next.js hosting with a generous free tier. You'll need a separate PostgreSQL database (Vercel Postgres, Supabase, Neon, or Railway). See [DEPLOYMENT-VERCEL.md](./DEPLOYMENT-VERCEL.md) for detailed deployment instructions.
+
+**Quick Start:**
+1. Push your code to GitHub
+2. Sign up at [vercel.com](https://vercel.com)
+3. Import your GitHub repository
+4. Set up a PostgreSQL database (Vercel Postgres, Supabase, or Neon)
+5. Set environment variables in Vercel dashboard
+6. Deploy - Vercel auto-detects Next.js
+7. Run migrations locally: `vercel env pull .env.local && npm run migrate`
+8. Create root user: `npm run create-root-user`
+
 ### Creating a Root User
 
 After deployment, create an admin user:
