@@ -40,7 +40,11 @@ Track your calories and macros with AI-powered meal parsing. Simply describe wha
 
 3. **Run database migrations**
    ```bash
-   # Apply migrations from the migrations/ directory to your PostgreSQL database
+   # Run Better Auth migrations
+   npm run auth:migrate
+   
+   # Run all migrations (Better Auth + custom SQL migrations)
+   npm run migrate
    ```
 
 4. **Start the development server**
@@ -57,6 +61,37 @@ Track your calories and macros with AI-powered meal parsing. Simply describe wha
 3. AI will parse the meal and extract nutritional information
 4. Review and add the meal to your daily log
 5. Track your daily totals and view meal history
+
+## Deployment
+
+### Railway (Recommended - Free Tier Available)
+
+Railway offers free tiers for both the application and PostgreSQL database. See [DEPLOYMENT.md](./DEPLOYMENT.md) for detailed deployment instructions.
+
+**Quick Start:**
+1. Push your code to GitHub
+2. Sign up at [railway.app](https://railway.app)
+3. Create a new project from your GitHub repo
+4. Add a PostgreSQL database
+5. Set environment variables (see `.env.local.example`)
+6. Deploy - migrations run automatically
+7. Create root user via Railway shell: `npm run create-root-user`
+
+### Creating a Root User
+
+After deployment, create an admin user:
+
+```bash
+npm run create-root-user <email> <password> [name]
+```
+
+Or set environment variables:
+```bash
+ROOT_USER_EMAIL=admin@example.com
+ROOT_USER_PASSWORD=securepassword123
+ROOT_USER_NAME="Admin User"
+npm run create-root-user
+```
 
 ---
 
