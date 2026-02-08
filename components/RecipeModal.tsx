@@ -22,6 +22,11 @@ export default function RecipeModal({
   const [selectedMealType, setSelectedMealType] =
     useState<MealType>("breakfast");
 
+  const redirectToLogin = () => {
+    const path = window.location.pathname + window.location.search;
+    window.location.href = `/login?redirect=${encodeURIComponent(path)}`;
+  };
+
   useEffect(() => {
     if (isOpen) {
       fetchRecipes();
@@ -32,6 +37,10 @@ export default function RecipeModal({
     setLoading(true);
     try {
       const response = await fetch(`/api/recipes`);
+      if (response.status === 401) {
+        redirectToLogin();
+        return;
+      }
       if (response.ok) {
         const data = await response.json();
         setRecipes(data.recipes);
@@ -57,6 +66,10 @@ export default function RecipeModal({
         body: JSON.stringify({ id }),
       });
 
+      if (response.status === 401) {
+        redirectToLogin();
+        return;
+      }
       if (response.ok) {
         fetchRecipes();
       } else {
@@ -84,6 +97,10 @@ export default function RecipeModal({
         body: JSON.stringify({ id, name: editName.trim() }),
       });
 
+      if (response.status === 401) {
+        redirectToLogin();
+        return;
+      }
       if (response.ok) {
         setEditingId(null);
         setEditName("");

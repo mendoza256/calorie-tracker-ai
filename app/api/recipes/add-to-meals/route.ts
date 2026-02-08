@@ -6,7 +6,7 @@ import {
   upsertDailyTotals,
 } from "@/lib/db";
 import { getTodayDateString } from "@/lib/utils";
-import { requireAuthenticatedUser } from "@/lib/auth-helpers";
+import { AuthError, requireAuthenticatedUser } from "@/lib/auth-helpers";
 
 export async function POST(request: NextRequest) {
   try {
@@ -79,6 +79,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ meal });
   } catch (error) {
     console.error("Error adding recipe to meals:", error);
+    if (error instanceof AuthError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
     return NextResponse.json(
       { error: "Failed to add recipe to meals" },
       { status: 500 }

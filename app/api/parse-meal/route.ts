@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { openai } from "@/lib/openai";
 import { createMeal, getDailyTotalsByDate, upsertDailyTotals } from "@/lib/db";
 import { getTodayDateString } from "@/lib/utils";
-import { requireAuthenticatedUser } from "@/lib/auth-helpers";
+import { AuthError, requireAuthenticatedUser } from "@/lib/auth-helpers";
 
 interface ParsedMeal {
   calories: number;
@@ -126,6 +126,9 @@ Return ONLY the JSON, no other text.`,
     return NextResponse.json({ meal });
   } catch (error) {
     console.error("Error parsing meal:", error);
+    if (error instanceof AuthError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
     return NextResponse.json(
       {
         error:

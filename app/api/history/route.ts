@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getDailyTotalsByDates } from "@/lib/db";
 import { subDays, format } from "date-fns";
-import { requireAuthenticatedUser } from "@/lib/auth-helpers";
+import { AuthError, requireAuthenticatedUser } from "@/lib/auth-helpers";
 
 export async function GET() {
   try {
@@ -16,6 +16,9 @@ export async function GET() {
     return NextResponse.json({ totals });
   } catch (error) {
     console.error("Error fetching history:", error);
+    if (error instanceof AuthError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
     return NextResponse.json(
       { error: "Failed to fetch history" },
       { status: 500 }

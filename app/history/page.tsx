@@ -13,6 +13,11 @@ export default function HistoryPage() {
     const fetchHistory = async () => {
       try {
         const response = await fetch("/api/history");
+        if (response.status === 401) {
+          const path = window.location.pathname + window.location.search;
+          window.location.href = `/login?redirect=${encodeURIComponent(path)}`;
+          return;
+        }
         if (response.ok) {
           const data = await response.json();
           setTotals(data.totals);

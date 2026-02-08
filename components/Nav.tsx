@@ -85,7 +85,7 @@ export default function Nav() {
             >
               History
             </Link>
-            {user && (
+            {user ? (
               <>
                 <span className="text-gray-700 px-3 py-2 text-sm">
                   {user.name || user.email}
@@ -96,6 +96,21 @@ export default function Nav() {
                 >
                   Logout
                 </button>
+              </>
+            ) : (
+              <>
+                <Link
+                  href="/login"
+                  className="text-gray-700 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium"
+                >
+                  Login
+                </Link>
+                <Link
+                  href="/signup"
+                  className="text-gray-700 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium"
+                >
+                  Sign up
+                </Link>
               </>
             )}
           </div>

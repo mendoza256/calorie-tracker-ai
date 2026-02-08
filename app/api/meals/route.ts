@@ -8,7 +8,7 @@ import {
   upsertDailyTotals,
 } from "@/lib/db";
 import { getTodayDateString } from "@/lib/utils";
-import { requireAuthenticatedUser } from "@/lib/auth-helpers";
+import { AuthError, requireAuthenticatedUser } from "@/lib/auth-helpers";
 
 export async function GET(request: NextRequest) {
   try {
@@ -31,6 +31,9 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error("Error fetching meals:", error);
+    if (error instanceof AuthError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
     return NextResponse.json(
       { error: "Failed to fetch meals" },
       { status: 500 }
@@ -76,6 +79,9 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("Error updating meal:", error);
+    if (error instanceof AuthError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
     return NextResponse.json(
       { error: "Failed to update meal" },
       { status: 500 }
@@ -132,6 +138,9 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("Error deleting meal:", error);
+    if (error instanceof AuthError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
     return NextResponse.json(
       { error: "Failed to delete meal" },
       { status: 500 }

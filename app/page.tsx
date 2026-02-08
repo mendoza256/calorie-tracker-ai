@@ -19,9 +19,18 @@ function HomeContent() {
   const [totals, setTotals] = useState<DailyTotalsType | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const redirectToLogin = () => {
+    const path = window.location.pathname + window.location.search;
+    window.location.href = `/login?redirect=${encodeURIComponent(path)}`;
+  };
+
   const fetchMeals = async () => {
     try {
       const response = await fetch(`/api/meals?date=${selectedDate}`);
+      if (response.status === 401) {
+        redirectToLogin();
+        return;
+      }
       if (response.ok) {
         const data = await response.json();
         setMeals(data.meals);
@@ -52,6 +61,10 @@ function HomeContent() {
         body: JSON.stringify({ id }),
       });
 
+      if (response.status === 401) {
+        redirectToLogin();
+        return;
+      }
       if (response.ok) {
         fetchMeals();
       }

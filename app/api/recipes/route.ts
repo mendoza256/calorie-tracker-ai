@@ -6,7 +6,7 @@ import {
   deleteRecipe,
   getRecipeById,
 } from "@/lib/db";
-import { requireAuthenticatedUser } from "@/lib/auth-helpers";
+import { AuthError, requireAuthenticatedUser } from "@/lib/auth-helpers";
 
 export async function GET(request: NextRequest) {
   try {
@@ -16,6 +16,9 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ recipes });
   } catch (error) {
     console.error("Error fetching recipes:", error);
+    if (error instanceof AuthError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
     return NextResponse.json(
       { error: "Failed to fetch recipes" },
       { status: 500 }
@@ -61,6 +64,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ recipe });
   } catch (error) {
     console.error("Error creating recipe:", error);
+    if (error instanceof AuthError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
     return NextResponse.json(
       { error: "Failed to create recipe" },
       { status: 500 }
@@ -92,6 +98,9 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ recipe });
   } catch (error) {
     console.error("Error updating recipe:", error);
+    if (error instanceof AuthError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
     if (error instanceof Error && error.message === "Recipe not found") {
       return NextResponse.json({ error: "Recipe not found" }, { status: 404 });
     }
@@ -119,6 +128,9 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("Error deleting recipe:", error);
+    if (error instanceof AuthError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
     if (error instanceof Error && error.message === "Recipe not found") {
       return NextResponse.json({ error: "Recipe not found" }, { status: 404 });
     }

@@ -15,6 +15,11 @@ export default function MealInput({ onMealAdded }: MealInputProps) {
   const [error, setError] = useState<string | null>(null);
   const [showRecipeModal, setShowRecipeModal] = useState(false);
 
+  const redirectToLogin = () => {
+    const path = window.location.pathname + window.location.search;
+    window.location.href = `/login?redirect=${encodeURIComponent(path)}`;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!description.trim()) return;
@@ -31,6 +36,10 @@ export default function MealInput({ onMealAdded }: MealInputProps) {
         body: JSON.stringify({ description, mealType }),
       });
 
+      if (response.status === 401) {
+        redirectToLogin();
+        return;
+      }
       if (!response.ok) {
         const data = await response.json();
         throw new Error(data.error || "Failed to parse meal");
@@ -62,6 +71,10 @@ export default function MealInput({ onMealAdded }: MealInputProps) {
         body: JSON.stringify({ recipeId, mealType: selectedMealType }),
       });
 
+      if (response.status === 401) {
+        redirectToLogin();
+        return;
+      }
       if (!response.ok) {
         const data = await response.json();
         throw new Error(data.error || "Failed to add recipe to meals");

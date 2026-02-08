@@ -1,6 +1,16 @@
 import { auth } from "./auth";
 import { headers } from "next/headers";
 
+export class AuthError extends Error {
+  status: number;
+
+  constructor(message = "Unauthorized", status = 401) {
+    super(message);
+    this.name = "AuthError";
+    this.status = status;
+  }
+}
+
 export async function getAuthenticatedUser() {
   const session = await auth.api.getSession({
     headers: await headers(),
@@ -17,7 +27,7 @@ export async function requireAuthenticatedUser() {
   const user = await getAuthenticatedUser();
 
   if (!user) {
-    throw new Error("Unauthorized");
+    throw new AuthError("Unauthorized", 401);
   }
 
   return user;
