@@ -46,7 +46,6 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  runtime: "nodejs", // Required for Next.js 15.2.0+ to use auth.api in proxy
   matcher: [
     /*
      * Match all request paths except for the ones starting with:
