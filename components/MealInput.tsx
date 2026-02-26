@@ -57,7 +57,7 @@ export default function MealInput({ onMealAdded }: MealInputProps) {
 
   const handleSelectRecipe = async (
     recipeId: string,
-    selectedMealType: MealType
+    selectedMealType: MealType,
   ) => {
     setLoading(true);
     setError(null);
@@ -93,7 +93,7 @@ export default function MealInput({ onMealAdded }: MealInputProps) {
   return (
     <>
       <form onSubmit={handleSubmit} className="mb-6">
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap md:flex-nowrap">
           <select
             value={mealType}
             onChange={(e) => setMealType(e.target.value as MealType)}

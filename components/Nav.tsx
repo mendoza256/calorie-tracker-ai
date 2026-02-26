@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
+import { Calendar, User, LogOut } from "lucide-react";
 import { authClient } from "@/lib/auth-client";
 import logo from "@/assets/calorie-tracker-logo.png";
 
@@ -47,13 +48,17 @@ export default function Nav() {
     return (
       <nav className="bg-white shadow-sm border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16">
-            <div className="flex items-center">
-              <Link href="/" className="inline-flex items-center px-2 py-2">
+          <div className="flex justify-between items-center h-16 min-w-0">
+            <div className="flex-none flex justify-start items-center">
+              <Link
+                href="/"
+                className="flex-shrink-0 px-2 py-2"
+                aria-label="Calorie Tracker AI home"
+              >
                 <Image
                   src={logo}
                   alt="Calorie Tracker AI"
-                  className="h-8 w-auto"
+                  className="h-8 w-[91px] min-w-[91px] object-contain object-left block"
                   width={91}
                   height={32}
                   priority
@@ -69,42 +74,54 @@ export default function Nav() {
   return (
     <nav className="bg-white shadow-sm border-b border-gray-200">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between h-16">
-          <div className="flex">
-            <Link href="/" className="inline-flex items-center px-2 py-2">
+        <div className="flex justify-between items-center h-16 gap-2 min-w-0">
+          <div className="flex-none flex justify-start items-center min-w-0">
+            <Link
+              href="/"
+              className="flex-shrink-0 px-2 py-2 rounded-md"
+              aria-label="Calorie Tracker AI home"
+            >
               <Image
                 src={logo}
                 alt="Calorie Tracker AI"
-                className="h-8 w-auto"
+                className="h-8 w-[91px] min-w-[91px] object-contain object-left block"
                 width={91}
                 height={32}
                 priority
               />
             </Link>
           </div>
-          <div className="flex items-center space-x-4">
+          <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
             <Link
               href="/"
-              className="text-gray-700 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium"
+              className="text-gray-700 hover:text-gray-900 p-2 rounded-md text-sm font-medium"
             >
               Today
             </Link>
             <Link
               href="/history"
-              className="text-gray-700 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium"
+              className="text-gray-700 hover:text-gray-900 p-2 rounded-md"
+              aria-label="History"
+              title="History"
             >
-              History
+              <Calendar className="w-5 h-5" />
             </Link>
             {user ? (
               <>
-                <span className="text-gray-700 px-3 py-2 text-sm">
-                  {user.name || user.email}
+                <span
+                  className="text-gray-700 p-2 rounded-md flex items-center"
+                  title={user.name || user.email || "Profile"}
+                  aria-label={user.name || user.email || "Profile"}
+                >
+                  <User className="w-5 h-5" />
                 </span>
                 <button
                   onClick={handleLogout}
-                  className="text-gray-700 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium"
+                  className="text-gray-700 hover:text-gray-900 p-2 rounded-md"
+                  aria-label="Log out"
+                  title="Log out"
                 >
-                  Logout
+                  <LogOut className="w-5 h-5" />
                 </button>
               </>
             ) : (
