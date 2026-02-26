@@ -2,8 +2,10 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { authClient } from "@/lib/auth-client";
+import logo from "@/assets/calorie-tracker-logo.png";
 
 export default function Nav() {
   const router = useRouter();
@@ -47,11 +49,15 @@ export default function Nav() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16">
             <div className="flex items-center">
-              <Link
-                href="/"
-                className="inline-flex items-center px-2 py-2 text-xl font-bold text-gray-900"
-              >
-                Calorie Tracker AI
+              <Link href="/" className="inline-flex items-center px-2 py-2">
+                <Image
+                  src={logo}
+                  alt="Calorie Tracker AI"
+                  className="h-8 w-auto"
+                  width={91}
+                  height={32}
+                  priority
+                />
               </Link>
             </div>
           </div>
@@ -65,11 +71,15 @@ export default function Nav() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16">
           <div className="flex">
-            <Link
-              href="/"
-              className="inline-flex items-center px-2 py-2 text-xl font-bold text-gray-900"
-            >
-              Calorie Tracker AI
+            <Link href="/" className="inline-flex items-center px-2 py-2">
+              <Image
+                src={logo}
+                alt="Calorie Tracker AI"
+                className="h-8 w-auto"
+                width={91}
+                height={32}
+                priority
+              />
             </Link>
           </div>
           <div className="flex items-center space-x-4">

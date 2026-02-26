@@ -1,17 +1,17 @@
-'use client'
+"use client";
 
 interface DailyTotalsProps {
   totals: {
-    totalCalories: number
-    totalProtein: number
-    totalCarbs: number
-    totalFats: number
-  }
+    totalCalories: number;
+    totalProtein: number;
+    totalCarbs: number;
+    totalFats: number;
+  };
 }
 
 export default function DailyTotals({ totals }: DailyTotalsProps) {
   return (
-    <div className="bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg shadow-lg p-6 text-white">
+    <div className="bg-gradient-to-r from-purple-700 to-purple-700 rounded-lg shadow-lg p-6 text-white">
       <h2 className="text-xl font-bold mb-4">Daily Totals</h2>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <div className="bg-white/20 backdrop-blur-sm rounded-lg p-4">
@@ -40,5 +40,5 @@ export default function DailyTotals({ totals }: DailyTotalsProps) {
         </div>
       </div>
     </div>
-  )
+  );
 }
