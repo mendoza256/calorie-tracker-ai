@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { MealType } from "@/lib/types";
 import RecipeModal from "./RecipeModal";
+import ManualMealModal from "./ManualMealModal";
 
 interface MealInputProps {
   onMealAdded: () => void;
@@ -14,6 +15,7 @@ export default function MealInput({ onMealAdded }: MealInputProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showRecipeModal, setShowRecipeModal] = useState(false);
+  const [showManualModal, setShowManualModal] = useState(false);
 
   const redirectToLogin = () => {
     const path = window.location.pathname + window.location.search;
@@ -90,6 +92,49 @@ export default function MealInput({ onMealAdded }: MealInputProps) {
     }
   };
 
+  const handleAddManual = async (values: {
+    calories: number;
+    fat: number;
+    protein: number;
+    carbs: number;
+    mealType: MealType;
+  }) => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const response = await fetch("/api/meals/add-manual", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          calories: values.calories,
+          fats: values.fat,
+          protein: values.protein,
+          carbs: values.carbs,
+          mealType: values.mealType,
+        }),
+      });
+
+      if (response.status === 401) {
+        redirectToLogin();
+        return;
+      }
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || "Failed to add manual meal");
+      }
+
+      setShowManualModal(false);
+      onMealAdded();
+    } catch (err) {
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <>
       <form onSubmit={handleSubmit} className="mb-6">
@@ -123,7 +168,7 @@ export default function MealInput({ onMealAdded }: MealInputProps) {
         </div>
         {error && <p className="mt-2 text-red-600 text-sm">{error}</p>}
       </form>
-      <div className="mb-6">
+      <div className="mb-6 flex gap-2 flex-wrap">
         <button
           onClick={() => setShowRecipeModal(true)}
           disabled={loading}
@@ -131,11 +176,23 @@ export default function MealInput({ onMealAdded }: MealInputProps) {
         >
           Add from Recipes
         </button>
+        <button
+          onClick={() => setShowManualModal(true)}
+          disabled={loading}
+          className="px-4 py-2 bg-gray-600 text-white rounded-lg font-semibold hover:bg-gray-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+        >
+          Add manually
+        </button>
       </div>
       <RecipeModal
         isOpen={showRecipeModal}
         onClose={() => setShowRecipeModal(false)}
         onSelectRecipe={handleSelectRecipe}
+      />
+      <ManualMealModal
+        isOpen={showManualModal}
+        onClose={() => setShowManualModal(false)}
+        onAdd={handleAddManual}
       />
     </>
   );
